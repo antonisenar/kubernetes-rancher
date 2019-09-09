@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+Vagrant.configure("2") do |config|
+  ##### DEFINE VM #####
+  config.vm.define "ubudc2mtr" do |config|
+#  config.ssh.private_key_path = ["/Users/admin/.ssh/id_rsa", "~/.vagrant.d/insecure_private_key"]
+#  config.vm.provision "file", source: "/Users/admin/.ssh/id_rsa.pub", destination: "~/.ssh/authorized_keys"
+  config.vm.hostname = "ubudc2mtr"
+  config.vm.box = "generic/ubuntu1804"
+  config.vm.box_check_update = false
+  config.vm.provision :shell, path: "install_master.sh"
+  config.vm.network "public_network", bridge: 'en0: Ethernet', ip: "192.168.2.180"
+  config.vm.provider :virtualbox do |vb|
+  #   # Don't boot with headless mode
+  #   vb.gui = true
+  #
+  #   # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2"]
+#   vb.customize ["modifyhd", "/Users/admin/codigo/vagrant/datacenter2/ubudc2mtr/ubuntu.vdi", "--resize",20 * 1024]
+  end
+  end
+
+  config.vm.define "ubudc2wkr1" do |config|
+  config.vm.hostname = "ubudc2wkr1"
+  config.vm.box = "generic/ubuntu1804"
+  config.vm.box_check_update = false
+  config.vm.provision :shell, path: "install_worker.sh"
+  config.vm.network "public_network", bridge: 'en0: Ethernet', ip: "192.168.2.181"
+  config.vm.provider :virtualbox do |vb|
+  #   # Don't boot with headless mode
+  #   vb.gui = true
+  #
+  #   # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "3072", "--cpus", "4"]
+  end
+  end
+
+  config.vm.define "ubudc2wkr2" do |config|
+  config.vm.hostname = "ubudc2wkr2"
+  config.vm.box = "generic/ubuntu1804"
+  config.vm.box_check_update = false
+  config.vm.provision :shell, path: "install_worker.sh"
+  config.vm.network "public_network", bridge: 'en0: Ethernet', ip: "192.168.2.182"
+  config.vm.provider :virtualbox do |vb|
+  #   # Don't boot with headless mode
+  #   vb.gui = true
+  #
+  #   # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "3072", "--cpus", "2"]
+  end
+  end
+end
