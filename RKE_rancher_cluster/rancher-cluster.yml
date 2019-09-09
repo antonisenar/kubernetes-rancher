@@ -1,0 +1,22 @@
+nodes:
+  - address: 52.16.239.48
+    internal_address: 172.31.28.137
+    user: ubuntu
+    role: [controlplane,worker,etcd]
+    ssh_key_path: /Users/admin/certs/asenar.pem
+  - address: 54.229.65.203
+    internal_address: 172.31.28.55
+    user: ubuntu
+    role: [controlplane,worker,etcd]
+    ssh_key_path: /Users/admin/certs/asenar.pem
+  - address: 34.246.254.146
+    internal_address: 172.31.22.199
+    user: ubuntu
+    role: [controlplane,worker,etcd]
+    ssh_key_path: /Users/admin/certs/asenar.pem
+
+services:
+  etcd:
+    snapshot: true
+    creation: 6h
+    retention: 24h
