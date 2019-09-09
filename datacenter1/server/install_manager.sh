@@ -20,7 +20,7 @@ sudo usermod -aG docker $USER
 #sudo ip route add default via 192.168.2.157
 
 #Deshabilitamos swap
-swapoff -a
+sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 
