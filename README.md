@@ -5,7 +5,7 @@ DATACENTER1 y DATACENTER2:
 Permite crear dos clusters Kubernetes simulando dos centros enrutados, DATACENTER1 se crea sobre una red 192.168.1.0/24 en Virtualbox a través de VAGRANT. En esta red es donde se encuentra el único Rancher Server del Multi-Cluster.
 DATACENTER2 se crea sobre una red 192.168.2.0/24 en Virtualbox a través de Vagrant.
 
-AMbas redes deben estar enrutadas.
+AMbas redes deben estar enrutadas y si se utilizan varios anfitriones para crear la infraestructura es necesario deshabilitar la interfaz NAT de vagrant en los nodos y en el server Rancher.
 
 El orden para crear la infraestructura:
 
