@@ -16,7 +16,7 @@ sudo apt -y update
 sudo apt -y install linux-modules-extra-$(uname -r)
 sudo usermod -aG docker $USER
 
-swapoff -a
+sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 
