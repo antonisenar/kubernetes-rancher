@@ -18,7 +18,7 @@ sudo usermod -aG docker $USER
 
 
 # Deshabilitamos swap en el nodo.
-swapoff -a
+sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 ### OJO!! El siguiente comando dependerá de la instalación concreta de Rancher Server (CLuster EDIT)
