@@ -1,0 +1,21 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+Vagrant.configure("2") do |config|
+  ##### DEFINE VM #####
+
+    config.vm.define "ubudc1mgr" do |config|
+  config.vm.hostname = "ubudc1mgr"
+  config.vm.box = "generic/ubuntu1804"
+  config.vm.box_check_update = false
+  config.vm.provision :shell, path: "install_manager.sh"
+  config.vm.network "public_network", bridge: 'en0: WIFI (Airport)', ip: "192.168.1.200"
+  config.vm.provider :virtualbox do |vb|
+  #   # Don't boot with headless mode
+  #   vb.gui = true
+  #
+  #   # Use VBoxManage to customize the VM. For example to change memory:
+    vb.customize ["modifyvm", :id, "--memory", "2048", "--cpus", "2"]
+  end
+  end
+end
