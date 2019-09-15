@@ -1,0 +1,136 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    field.cattle.io/publicEndpoints: '[{"addresses":["172.31.19.110"],"port":80,"protocol":"HTTP","serviceName":"wordpress:wordpress-wordpress","ingressName":"wordpress:wordpress","hostname":"asenar.wordpress.tfp.rancher.io","allNodes":true}]'
+  creationTimestamp: null
+  generation: 1
+  labels:
+    app: wordpress-wordpress
+    chart: wordpress-2.1.12
+    heritage: Tiller
+    io.cattle.field/appId: wordpress
+    release: wordpress
+  name: wordpress-wordpress
+  selfLink: /apis/apps/v1beta2/namespaces/wordpress/deployments/wordpress-wordpress
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: wordpress-wordpress
+      release: wordpress
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: wordpress-wordpress
+        release: wordpress
+    spec:
+      containers:
+      - env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+        - name: MARIADB_HOST
+          value: wordpress-mariadb
+        - name: MARIADB_PORT_NUMBER
+          value: "3306"
+        - name: WORDPRESS_DATABASE_NAME
+          value: wordpress
+        - name: WORDPRESS_DATABASE_USER
+          value: wordpress
+        - name: WORDPRESS_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mariadb-password
+              name: wordpress-mariadb
+        - name: WORDPRESS_USERNAME
+          value: user
+        - name: WORDPRESS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: wordpress-password
+              name: wordpress-wordpress
+        - name: WORDPRESS_EMAIL
+          value: user@example.com
+        - name: WORDPRESS_FIRST_NAME
+          value: FirstName
+        - name: WORDPRESS_LAST_NAME
+          value: LastName
+        - name: WORDPRESS_BLOG_NAME
+          value: User's Blog!
+        - name: WORDPRESS_TABLE_PREFIX
+          value: wp_
+        - name: SMTP_HOST
+        - name: SMTP_PORT
+        - name: SMTP_USER
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: smtp-password
+              name: wordpress-wordpress
+        - name: SMTP_USERNAME
+        - name: SMTP_PROTOCOL
+        image: bitnami/wordpress:4.9.8-debian-9
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /wp-login.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: wordpress-wordpress
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        - containerPort: 443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /wp-login.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 300m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /bitnami/apache
+          name: wordpress-data
+          subPath: apache
+        - mountPath: /bitnami/wordpress
+          name: wordpress-data
+          subPath: wordpress
+        - mountPath: /bitnami/php
+          name: wordpress-data
+          subPath: php
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: wordpress-data
+        persistentVolumeClaim:
+          claimName: wordpress-wordpress
+status: {}
