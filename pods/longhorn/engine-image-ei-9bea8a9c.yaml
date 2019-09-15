@@ -1,0 +1,68 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "1"
+  creationTimestamp: null
+  generation: 1
+  labels:
+    longhorn: engine-image
+  name: engine-image-ei-9bea8a9c
+  selfLink: /apis/apps/v1beta2/namespaces/longhorn-system/daemonsets/engine-image-ei-9bea8a9c
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      longhorn: engine-image
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        longhorn: engine-image
+      name: engine-image-ei-9bea8a9c
+    spec:
+      containers:
+      - args:
+        - -c
+        - cp /usr/local/bin/longhorn* /data/ && echo installed && trap 'rm /data/longhorn*
+          && echo cleaned up' EXIT && sleep infinity
+        command:
+        - /bin/bash
+        image: rancher/longhorn-engine:v0.5.0
+        imagePullPolicy: Always
+        name: engine-image-ei-9bea8a9c
+        readinessProbe:
+          exec:
+            command:
+            - ls
+            - /data/longhorn
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data/
+          name: data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /var/lib/rancher/longhorn/engine-binaries/rancher-longhorn-engine-v0.5.0
+          type: ""
+        name: data
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
