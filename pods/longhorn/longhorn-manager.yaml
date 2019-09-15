@@ -1,0 +1,108 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "1"
+  creationTimestamp: null
+  generation: 1
+  labels:
+    app: longhorn-manager
+    io.cattle.field/appId: longhorn-system
+  name: longhorn-manager
+  selfLink: /apis/apps/v1beta2/namespaces/longhorn-system/daemonsets/longhorn-manager
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: longhorn-manager
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: longhorn-manager
+    spec:
+      containers:
+      - command:
+        - longhorn-manager
+        - -d
+        - daemon
+        - --engine-image
+        - rancher/longhorn-engine:v0.5.0
+        - --manager-image
+        - rancher/longhorn-manager:v0.5.0
+        - --service-account
+        - longhorn-service-account
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: LONGHORN_BACKEND_SVC
+          value: longhorn-backend
+        image: rancher/longhorn-manager:v0.5.0
+        imagePullPolicy: Always
+        name: longhorn-manager
+        ports:
+        - containerPort: 9500
+          name: manager
+          protocol: TCP
+        resources: {}
+        securityContext:
+          privileged: true
+          procMount: Default
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /host/dev/
+          name: dev
+        - mountPath: /host/proc/
+          name: proc
+        - mountPath: /var/run/
+          name: varrun
+        - mountPath: /var/lib/rancher/longhorn/
+          mountPropagation: Bidirectional
+          name: longhorn
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: longhorn-service-account
+      serviceAccountName: longhorn-service-account
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /dev/
+          type: ""
+        name: dev
+      - hostPath:
+          path: /proc/
+          type: ""
+        name: proc
+      - hostPath:
+          path: /var/run/
+          type: ""
+        name: varrun
+      - hostPath:
+          path: /var/lib/rancher/longhorn/
+          type: ""
+        name: longhorn
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
