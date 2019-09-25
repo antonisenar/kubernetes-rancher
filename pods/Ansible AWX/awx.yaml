@@ -1,0 +1,886 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    awx_settings: |
+      import os
+      import socket
+      ADMINS = ()
+
+
+      AWX_PROOT_ENABLED = False
+
+      # Automatically deprovision pods that go offline
+      AWX_AUTO_DEPROVISION_INSTANCES = True
+
+      #Autoprovisioning should replace this
+      CLUSTER_HOST_ID = socket.gethostname()
+      SYSTEM_UUID = '00000000-0000-0000-0000-000000000000'
+
+      SESSION_COOKIE_SECURE = False
+      CSRF_COOKIE_SECURE = False
+
+      REMOTE_HOST_HEADERS = ['HTTP_X_FORWARDED_FOR']
+
+      STATIC_ROOT = '/var/lib/awx/public/static'
+      PROJECTS_ROOT = '/var/lib/awx/projects'
+      JOBOUTPUT_ROOT = '/var/lib/awx/job_status'
+      SECRET_KEY = file('/etc/tower/SECRET_KEY', 'rb').read().strip()
+      ALLOWED_HOSTS = ['*']
+      INTERNAL_API_URL = 'http://127.0.0.1:8052'
+      SERVER_EMAIL = 'root@localhost'
+      DEFAULT_FROM_EMAIL = 'webmaster@localhost'
+      EMAIL_SUBJECT_PREFIX = '[AWX] '
+      EMAIL_HOST = 'localhost'
+      EMAIL_PORT = 25
+      EMAIL_HOST_USER = ''
+      EMAIL_HOST_PASSWORD = ''
+      EMAIL_USE_TLS = False
+
+      LOGGING['handlers']['console'] = {
+          '()': 'logging.StreamHandler',
+          'level': 'DEBUG',
+          'formatter': 'simple',
+      }
+
+      LOGGING['loggers']['django.request']['handlers'] = ['console']
+      LOGGING['loggers']['rest_framework.request']['handlers'] = ['console']
+      LOGGING['loggers']['awx']['handlers'] = ['console']
+      LOGGING['loggers']['awx.main.commands.run_callback_receiver']['handlers'] = ['console']
+      LOGGING['loggers']['awx.main.commands.inventory_import']['handlers'] = ['console']
+      LOGGING['loggers']['awx.main.tasks']['handlers'] = ['console']
+      LOGGING['loggers']['awx.main.scheduler']['handlers'] = ['console']
+      LOGGING['loggers']['django_auth_ldap']['handlers'] = ['console']
+      LOGGING['loggers']['social']['handlers'] = ['console']
+      LOGGING['loggers']['system_tracking_migrations']['handlers'] = ['console']
+      LOGGING['loggers']['rbac_migrations']['handlers'] = ['console']
+      LOGGING['loggers']['awx.isolated.manager.playbooks']['handlers'] = ['console']
+      LOGGING['handlers']['callback_receiver'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['fact_receiver'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['task_system'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['tower_warnings'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['rbac_migrations'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['system_tracking_migrations'] = {'class': 'logging.NullHandler'}
+      LOGGING['handlers']['management_playbooks'] = {'class': 'logging.NullHandler'}
+
+      DATABASES = {
+          'default': {
+              'ATOMIC_REQUESTS': True,
+              'ENGINE': 'django.db.backends.postgresql',
+              'NAME': "awx",
+              'USER': "postgres",
+              'PASSWORD': "awx",
+              'HOST': "awx-postgresql",
+              'PORT': "5432",
+          }
+      }
+
+      BROKER_URL = 'amqp://{}:{}@{}:{}/{}'.format(
+          "awx",
+          "awx",
+          "awx-rabbitmq",
+          "5672",
+          "awx")
+
+      CHANNEL_LAYERS = {
+          'default': {'BACKEND': 'asgi_amqp.AMQPChannelLayer',
+                      'ROUTING': 'awx.main.routing.channel_routing',
+                      'CONFIG': {'url': BROKER_URL}}
+      }
+
+      CACHES = {
+          'default': {
+              'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+              'LOCATION': '{}:{}'.format("awx-memcached", "11211")
+          },
+          'ephemeral': {
+              'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+          },
+      }
+
+      USE_X_FORWARDED_PORT = True
+    secret_key: awxsecret
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app.kubernetes.io/instance: awx
+      app.kubernetes.io/managed-by: Tiller
+      app.kubernetes.io/name: awx
+      helm.sh/chart: awx-0.2.0
+    name: awx-application-config
+    namespace: awx
+    resourceVersion: "9862"
+    selfLink: /api/v1/namespaces/awx/configmaps/awx-application-config
+    uid: 3dd31e40-dfd6-11e9-9311-080027c4df3c
+- apiVersion: v1
+  data:
+    enabled_plugins: '[rabbitmq_management, rabbitmq_peer_discovery_k8s].'
+    rabbitmq.conf: |-
+      ##username and password
+      default_user=awx
+      default_pass=CHANGEME
+      ## Clustering
+      cluster_formation.peer_discovery_backend  = rabbit_peer_discovery_k8s
+      cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+      cluster_formation.node_cleanup.interval = 10
+      cluster_formation.node_cleanup.only_log_warning = false
+      cluster_partition_handling = autoheal
+      ## queue master locator
+      queue_master_locator=min-masters
+      ## enable guest user
+      loopback_users.guest = false
+      ## awx vhost
+      default_vhost = awx
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: rabbitmq
+      chart: rabbitmq-4.0.1
+      heritage: Tiller
+      release: awx
+    name: awx-rabbitmq-config
+    namespace: awx
+    resourceVersion: "9861"
+    selfLink: /api/v1/namespaces/awx/configmaps/awx-rabbitmq-config
+    uid: 3dd1f94e-dfd6-11e9-9311-080027c4df3c
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      field.cattle.io/publicEndpoints: '[{"addresses":["192.168.1.181"],"port":30218,"protocol":"TCP","serviceName":"awx:awx","allNodes":true}]'
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"creationTimestamp":null,"labels":{"app.kubernetes.io/instance":"awx","app.kubernetes.io/managed-by":"Tiller","app.kubernetes.io/name":"awx","helm.sh/chart":"awx-0.2.0"},"name":"awx","namespace":"awx","selfLink":"/api/v1/namespaces/awx/services/awx"},"spec":{"ports":[{"name":"http","port":8052,"protocol":"TCP","targetPort":8052}],"selector":{"app.kubernetes.io/instance":"awx","app.kubernetes.io/name":"awx"},"sessionAffinity":"None","type":"NodePort"}}
+    creationTimestamp: 2019-09-25T20:58:30Z
+    labels:
+      app.kubernetes.io/instance: awx
+      app.kubernetes.io/managed-by: Tiller
+      app.kubernetes.io/name: awx
+      helm.sh/chart: awx-0.2.0
+    name: awx
+    namespace: awx
+    resourceVersion: "11640"
+    selfLink: /api/v1/namespaces/awx/services/awx
+    uid: 3aa67151-dfd7-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: 10.43.19.195
+    externalTrafficPolicy: Cluster
+    ports:
+    - name: http
+      nodePort: 30218
+      port: 8052
+      protocol: TCP
+      targetPort: 8052
+    selector:
+      app.kubernetes.io/instance: awx
+      app.kubernetes.io/name: awx
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: awx-memcached
+      chart: memcached-2.4.0
+      heritage: Tiller
+      release: awx
+    name: awx-memcached
+    namespace: awx
+    resourceVersion: "9868"
+    selfLink: /api/v1/namespaces/awx/services/awx-memcached
+    uid: 3dd88d93-dfd6-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: None
+    ports:
+    - name: memcache
+      port: 11211
+      protocol: TCP
+      targetPort: memcache
+    selector:
+      app: awx-memcached
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: postgresql
+      chart: postgresql-3.7.1
+      heritage: Tiller
+      release: awx
+    name: awx-postgresql
+    namespace: awx
+    resourceVersion: "9873"
+    selfLink: /api/v1/namespaces/awx/services/awx-postgresql
+    uid: 3dde1dce-dfd6-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: 10.43.157.89
+    ports:
+    - name: postgresql
+      port: 5432
+      protocol: TCP
+      targetPort: postgresql
+    selector:
+      app: postgresql
+      release: awx
+      role: master
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: postgresql
+      chart: postgresql-3.7.1
+      heritage: Tiller
+      release: awx
+    name: awx-postgresql-headless
+    namespace: awx
+    resourceVersion: "9870"
+    selfLink: /api/v1/namespaces/awx/services/awx-postgresql-headless
+    uid: 3dd9c398-dfd6-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: None
+    ports:
+    - name: postgresql
+      port: 5432
+      protocol: TCP
+      targetPort: postgresql
+    selector:
+      app: postgresql
+      release: awx
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: rabbitmq
+      chart: rabbitmq-4.0.1
+      heritage: Tiller
+      release: awx
+    name: awx-rabbitmq
+    namespace: awx
+    resourceVersion: "9878"
+    selfLink: /api/v1/namespaces/awx/services/awx-rabbitmq
+    uid: 3de23772-dfd6-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: 10.43.197.8
+    ports:
+    - name: epmd
+      port: 4369
+      protocol: TCP
+      targetPort: epmd
+    - name: amqp
+      port: 5672
+      protocol: TCP
+      targetPort: amqp
+    - name: dist
+      port: 25672
+      protocol: TCP
+      targetPort: dist
+    - name: stats
+      port: 15672
+      protocol: TCP
+      targetPort: stats
+    selector:
+      app: rabbitmq
+      release: awx
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    labels:
+      app: rabbitmq
+      chart: rabbitmq-4.0.1
+      heritage: Tiller
+      release: awx
+    name: awx-rabbitmq-headless
+    namespace: awx
+    resourceVersion: "9875"
+    selfLink: /api/v1/namespaces/awx/services/awx-rabbitmq-headless
+    uid: 3de042e8-dfd6-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: None
+    ports:
+    - name: epmd
+      port: 4369
+      protocol: TCP
+      targetPort: epmd
+    - name: amqp
+      port: 5672
+      protocol: TCP
+      targetPort: amqp
+    - name: dist
+      port: 25672
+      protocol: TCP
+      targetPort: dist
+    - name: stats
+      port: 15672
+      protocol: TCP
+      targetPort: stats
+    selector:
+      app: rabbitmq
+      release: awx
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    generation: 3
+    labels:
+      app: awx-memcached
+      chart: memcached-2.4.0
+      heritage: Tiller
+      release: awx
+    name: awx-memcached
+    namespace: awx
+    resourceVersion: "10942"
+    selfLink: /apis/apps/v1beta1/namespaces/awx/statefulsets/awx-memcached
+    uid: 3deef6a3-dfd6-11e9-9311-080027c4df3c
+  spec:
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: awx-memcached
+        chart: memcached-2.4.0
+        heritage: Tiller
+        release: awx
+    serviceName: awx-memcached
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: awx-memcached
+          chart: memcached-2.4.0
+          heritage: Tiller
+          release: awx
+      spec:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: awx-memcached
+                  release: awx
+              topologyKey: kubernetes.io/hostname
+        containers:
+        - command:
+          - memcached
+          - -m 64
+          - -o
+          - modern
+          - -v
+          image: memcached:1.5.6-alpine
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: memcache
+            timeoutSeconds: 5
+          name: awx-memcached
+          ports:
+          - containerPort: 11211
+            name: memcache
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: memcache
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    updateStrategy:
+      type: OnDelete
+  status:
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: awx-memcached-7b69bf5fd4
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: awx-memcached-7b69bf5fd4
+    updatedReplicas: 1
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    generation: 1
+    labels:
+      app: postgresql
+      chart: postgresql-3.7.1
+      heritage: Tiller
+      release: awx
+    name: awx-postgresql
+    namespace: awx
+    resourceVersion: "11474"
+    selfLink: /apis/apps/v1beta1/namespaces/awx/statefulsets/awx-postgresql
+    uid: 3df9d3fa-dfd6-11e9-9311-080027c4df3c
+  spec:
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: postgresql
+        release: awx
+        role: master
+    serviceName: awx-postgresql-headless
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: postgresql
+          chart: postgresql-3.7.1
+          heritage: Tiller
+          release: awx
+          role: master
+        name: awx-postgresql
+      spec:
+        containers:
+        - env:
+          - name: POSTGRESQL_USERNAME
+            value: postgres
+          - name: POSTGRESQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: postgresql-password
+                name: awx-postgresql
+          - name: POSTGRESQL_DATABASE
+            value: awx
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          image: docker.io/bitnami/postgresql:9.6
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - exec pg_isready -U "postgres" --host $POD_IP
+            failureThreshold: 6
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: awx-postgresql
+          ports:
+          - containerPort: 5432
+            name: postgresql
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - exec pg_isready -U "postgres" --host $POD_IP
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /bitnami/postgresql
+            name: data
+        dnsPolicy: ClusterFirst
+        initContainers:
+        - command:
+          - sh
+          - -c
+          - |
+            chown -R 1001:1001 /bitnami
+            if [ -d /bitnami/postgresql/data ]; then
+              chmod  0700 /bitnami/postgresql/data;
+            fi
+          image: docker.io/bitnami/minideb:latest
+          imagePullPolicy: Always
+          name: init-chmod-data
+          resources: {}
+          securityContext:
+            procMount: Default
+            runAsUser: 0
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /bitnami/postgresql
+            name: data
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 1001
+          runAsUser: 1001
+        terminationGracePeriodSeconds: 30
+    updateStrategy:
+      type: RollingUpdate
+    volumeClaimTemplates:
+    - metadata:
+        creationTimestamp: null
+        name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+  status:
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: awx-postgresql-d957fd5f7
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: awx-postgresql-d957fd5f7
+    updatedReplicas: 1
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    creationTimestamp: 2019-09-25T20:51:26Z
+    generation: 1
+    labels:
+      app: rabbitmq
+      chart: rabbitmq-4.0.1
+      heritage: Tiller
+      release: awx
+    name: awx-rabbitmq
+    namespace: awx
+    resourceVersion: "10384"
+    selfLink: /apis/apps/v1beta1/namespaces/awx/statefulsets/awx-rabbitmq
+    uid: 3e015294-dfd6-11e9-9311-080027c4df3c
+  spec:
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: rabbitmq
+        release: awx
+    serviceName: awx-rabbitmq-headless
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: rabbitmq
+          chart: rabbitmq-4.0.1
+          release: awx
+      spec:
+        containers:
+        - command:
+          - bash
+          - -ec
+          - |
+            mkdir -p /opt/bitnami/rabbitmq/.rabbitmq/
+            mkdir -p /opt/bitnami/rabbitmq/etc/rabbitmq/
+            #persist the erlang cookie in both places for server and cli tools
+            echo $RABBITMQ_ERL_COOKIE > /opt/bitnami/rabbitmq/var/lib/rabbitmq/.erlang.cookie
+            cp /opt/bitnami/rabbitmq/var/lib/rabbitmq/.erlang.cookie /opt/bitnami/rabbitmq/.rabbitmq/
+            #change permission so only the user has access to the cookie file
+            chmod 600 /opt/bitnami/rabbitmq/.rabbitmq/.erlang.cookie /opt/bitnami/rabbitmq/var/lib/rabbitmq/.erlang.cookie
+            #copy the mounted configuration to both places
+            cp  /opt/bitnami/rabbitmq/conf/* /opt/bitnami/rabbitmq/etc/rabbitmq
+            # Apply resources limits
+            ulimit -n "${RABBITMQ_ULIMIT_NOFILES}"
+            #replace the default password that is generated
+            sed -i "s/CHANGEME/$RABBITMQ_PASSWORD/g" /opt/bitnami/rabbitmq/etc/rabbitmq/rabbitmq.conf
+            # Move logs to stdout
+            ln -sF /dev/stdout /opt/bitnami/rabbitmq/var/log/rabbitmq/rabbit@${MY_POD_IP}.log
+            ln -sF /dev/stdout /opt/bitnami/rabbitmq/var/log/rabbitmq/rabbit@${MY_POD_IP}_upgrade.log
+            exec rabbitmq-server
+          env:
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: K8S_SERVICE_NAME
+            value: awx-rabbitmq-headless
+          - name: K8S_ADDRESS_TYPE
+            value: ip
+          - name: RABBITMQ_NODENAME
+            value: rabbit@$(MY_POD_IP)
+          - name: RABBITMQ_ULIMIT_NOFILES
+            value: "65536"
+          - name: RABBITMQ_USE_LONGNAME
+            value: "true"
+          - name: RABBITMQ_ERL_COOKIE
+            valueFrom:
+              secretKeyRef:
+                key: rabbitmq-erlang-cookie
+                name: awx-rabbitmq
+          - name: RABBITMQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: rabbitmq-password
+                name: awx-rabbitmq
+          image: docker.io/bitnami/rabbitmq:3.7.9
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - test "$(curl -sS -f --user awx:$RABBITMQ_PASSWORD 127.0.0.1:15672/api/healthchecks/node)"
+                = '{"status":"ok"}'
+            failureThreshold: 6
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: rabbitmq
+          ports:
+          - containerPort: 4369
+            name: epmd
+            protocol: TCP
+          - containerPort: 5672
+            name: amqp
+            protocol: TCP
+          - containerPort: 25672
+            name: dist
+            protocol: TCP
+          - containerPort: 15672
+            name: stats
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - sh
+              - -c
+              - test "$(curl -sS -f --user awx:$RABBITMQ_PASSWORD 127.0.0.1:15672/api/healthchecks/node)"
+                = '{"status":"ok"}'
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /opt/bitnami/rabbitmq/conf
+            name: config-volume
+          - mountPath: /opt/bitnami/rabbitmq/var/lib/rabbitmq/
+            name: data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 1001
+          runAsUser: 1001
+        serviceAccount: awx-rabbitmq
+        serviceAccountName: awx-rabbitmq
+        terminationGracePeriodSeconds: 10
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: rabbitmq.conf
+              path: rabbitmq.conf
+            - key: enabled_plugins
+              path: enabled_plugins
+            name: awx-rabbitmq-config
+          name: config-volume
+        - emptyDir: {}
+          name: data
+    updateStrategy:
+      rollingUpdate:
+        partition: 0
+      type: RollingUpdate
+  status:
+    collisionCount: 0
+    currentReplicas: 1
+    currentRevision: awx-rabbitmq-7b7c99bbf5
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updateRevision: awx-rabbitmq-7b7c99bbf5
+    updatedReplicas: 1
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "2"
+      field.cattle.io/publicEndpoints: '[{"addresses":["192.168.1.181"],"port":30218,"protocol":"TCP","serviceName":"awx:awx","allNodes":true}]'
+    creationTimestamp: 2019-09-25T20:51:26Z
+    generation: 3
+    labels:
+      app.kubernetes.io/instance: awx
+      app.kubernetes.io/managed-by: Tiller
+      app.kubernetes.io/name: awx
+      helm.sh/chart: awx-0.2.0
+    name: awx
+    namespace: awx
+    resourceVersion: "11643"
+    selfLink: /apis/extensions/v1beta1/namespaces/awx/deployments/awx
+    uid: 3de8c399-dfd6-11e9-9311-080027c4df3c
+  spec:
+    progressDeadlineSeconds: 2147483647
+    replicas: 1
+    revisionHistoryLimit: 2147483647
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: awx
+        app.kubernetes.io/name: awx
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        annotations:
+          cattle.io/timestamp: 2019-09-25T20:53:44Z
+          field.cattle.io/ports: '[[{"containerPort":8052,"dnsName":"awx-","name":"8052tcp00","protocol":"TCP","sourcePort":0}]]'
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/instance: awx
+          app.kubernetes.io/name: awx
+      spec:
+        containers:
+        - env:
+          - name: DATABASE_HOST
+            value: awx-postgresql
+          - name: DATABASE_NAME
+            value: awx
+          - name: DATABASE_PASSWORD
+            value: awx
+          - name: DATABASE_PORT
+            value: "5432"
+          - name: DATABASE_USER
+            value: postgres
+          - name: MEMCACHED_HOST
+            value: awx-memcached
+          - name: RABBITMQ_HOST
+            value: awx-rabbitmq
+          image: ansible/awx_web:2.1.2
+          imagePullPolicy: IfNotPresent
+          name: web
+          ports:
+          - containerPort: 8052
+            name: 8052tcp00
+            protocol: TCP
+          resources: {}
+          securityContext:
+            capabilities: {}
+            procMount: Default
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/tower
+            name: awx-application-config
+        - command:
+          - /usr/bin/launch_awx_task.sh
+          env:
+          - name: AWX_ADMIN_PASSWORD
+            value: password
+          - name: AWX_ADMIN_USER
+            value: admin
+          - name: DATABASE_HOST
+            value: awx-postgresql
+          - name: DATABASE_NAME
+            value: awx
+          - name: DATABASE_PASSWORD
+            value: awx
+          - name: DATABASE_PORT
+            value: "5432"
+          - name: DATABASE_USER
+            value: postgres
+          - name: MEMCACHED_HOST
+            value: awx-memcached
+          - name: RABBITMQ_HOST
+            value: awx-rabbitmq
+          image: ansible/awx_task:2.1.2
+          imagePullPolicy: IfNotPresent
+          name: task
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/tower
+            name: awx-application-config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: awx_settings
+              path: settings.py
+            - key: secret_key
+              path: SECRET_KEY
+            name: awx-application-config
+          name: awx-application-config
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: 2019-09-25T20:51:26Z
+      lastUpdateTime: 2019-09-25T20:51:26Z
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 3
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+kind: List
