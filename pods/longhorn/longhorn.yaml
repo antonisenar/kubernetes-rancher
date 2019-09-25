@@ -1,0 +1,469 @@
+apiVersion: v1
+items:
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: 2019-09-25T20:11:57Z
+    generation: 1
+    labels:
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-driver-deployer
+    namespace: longhorn-system
+    resourceVersion: "4939"
+    selfLink: /apis/extensions/v1beta1/namespaces/longhorn-system/deployments/longhorn-driver-deployer
+    uid: b983ef1e-dfd0-11e9-9311-080027c4df3c
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: longhorn-driver-deployer
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: longhorn-driver-deployer
+      spec:
+        containers:
+        - command:
+          - longhorn-manager
+          - -d
+          - deploy-driver
+          - --manager-image
+          - longhornio/longhorn-manager:v0.6.1
+          - --manager-url
+          - http://longhorn-backend:9500/v1
+          - --driver
+          - flexvolume
+          env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: SERVICE_ACCOUNT
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.serviceAccountName
+          - name: FLEXVOLUME_DIR
+          image: longhornio/longhorn-manager:v0.6.1
+          imagePullPolicy: Always
+          name: longhorn-driver-deployer
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        initContainers:
+        - command:
+          - sh
+          - -c
+          - while [ $(curl -m 1 -s -o /dev/null -w "%{http_code}" http://longhorn-backend:9500/v1)
+            != "200" ]; do echo waiting; sleep 2; done
+          image: longhornio/longhorn-manager:v0.6.1
+          imagePullPolicy: IfNotPresent
+          name: wait-longhorn-manager
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: longhorn-service-account
+        serviceAccountName: longhorn-service-account
+        terminationGracePeriodSeconds: 30
+  status:
+    conditions:
+    - lastTransitionTime: 2019-09-25T20:11:57Z
+      lastUpdateTime: 2019-09-25T20:11:57Z
+      message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+    - lastTransitionTime: 2019-09-25T20:11:57Z
+      lastUpdateTime: 2019-09-25T20:11:57Z
+      message: ReplicaSet "longhorn-driver-deployer-7d6d999bbf" is progressing.
+      reason: ReplicaSetUpdated
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    replicas: 1
+    unavailableReplicas: 1
+    updatedReplicas: 1
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      field.cattle.io/publicEndpoints: '[{"addresses":["192.168.1.181"],"port":31100,"protocol":"TCP","serviceName":"longhorn-system:longhorn-frontend","allNodes":true}]'
+    creationTimestamp: 2019-09-25T20:11:57Z
+    generation: 2
+    labels:
+      app: longhorn-ui
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-ui
+    namespace: longhorn-system
+    resourceVersion: "5301"
+    selfLink: /apis/extensions/v1beta1/namespaces/longhorn-system/deployments/longhorn-ui
+    uid: b986e6ba-dfd0-11e9-9311-080027c4df3c
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: longhorn-ui
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: longhorn-ui
+      spec:
+        containers:
+        - env:
+          - name: LONGHORN_MANAGER_IP
+            value: http://longhorn-backend:9500
+          image: longhornio/longhorn-ui:v0.6.1
+          imagePullPolicy: IfNotPresent
+          name: longhorn-ui
+          ports:
+          - containerPort: 8000
+            name: http
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: 2019-09-25T20:15:44Z
+      lastUpdateTime: 2019-09-25T20:15:44Z
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: 2019-09-25T20:11:57Z
+      lastUpdateTime: 2019-09-25T20:15:44Z
+      message: ReplicaSet "longhorn-ui-746b746dc7" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 2
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: v1
+  data:
+    default-setting.yaml: "backup-target: \nbackup-target-credential-secret: \ncreate-default-disk-labeled-nodes:
+      false\ndefault-data-path: /var/lib/rancher/longhorn/\nreplica-soft-anti-affinity:
+      true\nstorage-over-provisioning-percentage: 500\nstorage-minimal-available-percentage:
+      10\nupgrade-checker: true\ndefault-replica-count: 1\nguaranteed-engine-cpu:
+      0\ndefault-longhorn-static-storage-class: longhorn-static\nbackupstore-poll-interval:
+      300\ntaint-toleration:"
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: 2019-09-25T20:11:56Z
+    labels:
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-default-setting
+    namespace: longhorn-system
+    resourceVersion: "4869"
+    selfLink: /api/v1/namespaces/longhorn-system/configmaps/longhorn-default-setting
+    uid: b9576e0a-dfd0-11e9-9311-080027c4df3c
+- apiVersion: v1
+  data:
+    release: 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
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: 2019-09-25T20:11:56Z
+    labels:
+      MODIFIED_AT: "1569442317"
+      NAME: longhorn-system
+      OWNER: TILLER
+      STATUS: DEPLOYED
+      VERSION: "1"
+    name: longhorn-system.v1
+    namespace: longhorn-system
+    resourceVersion: "4915"
+    selfLink: /api/v1/namespaces/longhorn-system/configmaps/longhorn-system.v1
+    uid: b94af831-dfd0-11e9-9311-080027c4df3c
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: 2019-09-25T20:11:56Z
+    labels:
+      app: longhorn-manager
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-backend
+    namespace: longhorn-system
+    resourceVersion: "4899"
+    selfLink: /api/v1/namespaces/longhorn-system/services/longhorn-backend
+    uid: b979e1fb-dfd0-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: 10.43.164.181
+    ports:
+    - name: manager
+      port: 9500
+      protocol: TCP
+      targetPort: manager
+    selector:
+      app: longhorn-manager
+    sessionAffinity: ClientIP
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 10800
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      field.cattle.io/publicEndpoints: '[{"addresses":["192.168.1.181"],"port":31100,"protocol":"TCP","serviceName":"longhorn-system:longhorn-frontend","allNodes":true}]'
+    creationTimestamp: 2019-09-25T20:11:56Z
+    labels:
+      app: longhorn-ui
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-frontend
+    namespace: longhorn-system
+    resourceVersion: "4906"
+    selfLink: /api/v1/namespaces/longhorn-system/services/longhorn-frontend
+    uid: b97dec77-dfd0-11e9-9311-080027c4df3c
+  spec:
+    clusterIP: 10.43.14.155
+    externalTrafficPolicy: Cluster
+    ports:
+    - name: http
+      nodePort: 31100
+      port: 80
+      protocol: TCP
+      targetPort: http
+    selector:
+      app: longhorn-ui
+    sessionAffinity: None
+    type: NodePort
+  status:
+    loadBalancer: {}
+- apiVersion: extensions/v1beta1
+  kind: DaemonSet
+  metadata:
+    creationTimestamp: 2019-09-25T20:17:25Z
+    generation: 1
+    labels:
+      longhorn.io/component: engine-image
+      longhorn.io/engine-image: ei-7c102650
+    name: engine-image-ei-7c102650
+    namespace: longhorn-system
+    resourceVersion: "5637"
+    selfLink: /apis/extensions/v1beta1/namespaces/longhorn-system/daemonsets/engine-image-ei-7c102650
+    uid: 7d518655-dfd1-11e9-9311-080027c4df3c
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        longhorn.io/component: engine-image
+        longhorn.io/engine-image: ei-7c102650
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          longhorn.io/component: engine-image
+          longhorn.io/engine-image: ei-7c102650
+        name: engine-image-ei-7c102650
+      spec:
+        containers:
+        - args:
+          - -c
+          - cp /usr/local/bin/longhorn* /data/ && echo installed && trap 'rm /data/longhorn*
+            && echo cleaned up' EXIT && sleep infinity
+          command:
+          - /bin/bash
+          image: longhornio/longhorn-engine:v0.6.0
+          imagePullPolicy: Always
+          name: engine-image-ei-7c102650
+          readinessProbe:
+            exec:
+              command:
+              - ls
+              - /data/longhorn
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /data/
+            name: data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: longhorn-service-account
+        serviceAccountName: longhorn-service-account
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /var/lib/rancher/longhorn/engine-binaries/longhornio-longhorn-engine-v0.6.0
+            type: ""
+          name: data
+    templateGeneration: 1
+    updateStrategy:
+      rollingUpdate:
+        maxUnavailable: 100%
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 1
+    desiredNumberScheduled: 1
+    numberAvailable: 1
+    numberMisscheduled: 0
+    numberReady: 1
+    observedGeneration: 1
+    updatedNumberScheduled: 1
+- apiVersion: extensions/v1beta1
+  kind: DaemonSet
+  metadata:
+    creationTimestamp: 2019-09-25T20:11:56Z
+    generation: 1
+    labels:
+      app: longhorn-manager
+      io.cattle.field/appId: longhorn-system
+    name: longhorn-manager
+    namespace: longhorn-system
+    resourceVersion: "5469"
+    selfLink: /apis/extensions/v1beta1/namespaces/longhorn-system/daemonsets/longhorn-manager
+    uid: b9805376-dfd0-11e9-9311-080027c4df3c
+  spec:
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: longhorn-manager
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: longhorn-manager
+      spec:
+        containers:
+        - command:
+          - longhorn-manager
+          - -d
+          - daemon
+          - --engine-image
+          - longhornio/longhorn-engine:v0.6.0
+          - --manager-image
+          - longhornio/longhorn-manager:v0.6.1
+          - --service-account
+          - longhorn-service-account
+          env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: LONGHORN_BACKEND_SVC
+            value: longhorn-backend
+          - name: DEFAULT_SETTING_PATH
+            value: /var/lib/longhorn/setting/default-setting.yaml
+          image: longhornio/longhorn-manager:v0.6.1
+          imagePullPolicy: Always
+          name: longhorn-manager
+          ports:
+          - containerPort: 9500
+            name: manager
+            protocol: TCP
+          resources: {}
+          securityContext:
+            privileged: true
+            procMount: Default
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /host/dev/
+            name: dev
+          - mountPath: /host/proc/
+            name: proc
+          - mountPath: /var/run/
+            name: varrun
+          - mountPath: /var/lib/rancher/longhorn/
+            mountPropagation: Bidirectional
+            name: longhorn
+          - mountPath: /var/lib/longhorn/setting/
+            name: longhorn-default-setting
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: longhorn-service-account
+        serviceAccountName: longhorn-service-account
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - hostPath:
+            path: /dev/
+            type: ""
+          name: dev
+        - hostPath:
+            path: /proc/
+            type: ""
+          name: proc
+        - hostPath:
+            path: /var/run/
+            type: ""
+          name: varrun
+        - hostPath:
+            path: /var/lib/rancher/longhorn/
+            type: ""
+          name: longhorn
+        - configMap:
+            defaultMode: 420
+            name: longhorn-default-setting
+          name: longhorn-default-setting
+    templateGeneration: 1
+    updateStrategy:
+      rollingUpdate:
+        maxUnavailable: 1
+      type: RollingUpdate
+  status:
+    currentNumberScheduled: 1
+    desiredNumberScheduled: 1
+    numberAvailable: 1
+    numberMisscheduled: 0
+    numberReady: 1
+    observedGeneration: 1
+    updatedNumberScheduled: 1
+kind: List
