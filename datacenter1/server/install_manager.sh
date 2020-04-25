@@ -22,19 +22,22 @@ sudo usermod -aG docker $USER
 #Deshabilitamos swap
 sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+###########################################################################################
+#Antes de Cerrar la Template para la distribución desde Template Rancher sobre vSphere:
+############################################################################################################
 
-#Antes de Cerrar la Template para la distribución sobre vSphere:
-
-#Reseteamos cualquier configuración cloud-init para que Rancher la inyecte
-sudo rm -rf /var/lib/cloud/instances
 
 #Si no disponemos de DNS interno y centralizado, hay que dar de alta el Manager en los ficheros /etc/hosts:
-
 192.168.1.200 rancher.senar.com
+
+#Reseteamos cualquier configuración cloud-init previa para que sea Rancher quien la inyecte:
+sudo rm -rf /var/lib/cloud/instances
+
+
 
 # Container para el rancher Manager
 
-sudo docker run -d --restart=unless-stopped -p 80:80 -p 443:443 rancher/rancher:v2.3.0-alpha5
+sudo docker run -d --restart=unless-stopped -p 80:80 -p 443:443 rancher/rancher
 
 
 
